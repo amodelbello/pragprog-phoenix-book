@@ -3,8 +3,8 @@ defmodule Rumbl.Multimedia.Permalink do
 
   def type, do: :id
 
-  def cast(binary) when is_binary(binary) do
-    case Integer.parse(binary) do
+  def cast(value) when is_binary(value) do
+    case Integer.parse(value) do
       {int, _} when int > 0 ->
         {:ok, int}
 
@@ -13,11 +13,11 @@ defmodule Rumbl.Multimedia.Permalink do
     end
   end
 
-  def case(integer) when is_integer(integer) do
+  def cast(integer) when is_integer(integer) do
     {:ok, integer}
   end
 
-  def case(_) do
+  def cast(_) do
     :error
   end
 
@@ -27,5 +27,13 @@ defmodule Rumbl.Multimedia.Permalink do
 
   def load(integer) when is_integer(integer) do
     {:ok, integer}
+  end
+
+  def embed_as(format) do
+    format
+  end
+
+  def equal?(term1, term2) do
+    term1 == term2
   end
 end

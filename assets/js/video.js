@@ -1,3 +1,4 @@
+import { Presence } from "phoenix"
 import Player from "./player"
 
 export default {
@@ -14,16 +15,37 @@ export default {
   },
 
   onReady(videoId, socket) {
-    const vidChannel = socket.channel(`videos:${videoId}`)
+    const msgContainer = document.getElementById("msg-container")
+    const msgInput = document.getElementById("msg-input")
+    const postButton = document.getElementById("msg-submit")
+    const userList = document.getElementById("user-list")
+    let lastSeenId = 0
+    const vidChannel = socket.channel(`videos:${videoId}`, () => {
+      last_seen_id: lastSeenId
+    })
+
+    const presence = new Presence(vidChannel)
+    presence.onSync(() => {
+      console.warn("this is presence", presence)
+      userList.innerHTML = presence
+        .list((id, { metas: [first, ...rest] }) => {
+          const count = rest.length + 1
+          return `<li>${id}: (${count})</li>`
+        })
+        .join("")
+    })
+
     vidChannel
       .join()
-      .receive("ok", ({ annotations }) => {
-        this.scheduleMessages(msgContainer, annotations)
+      .receive("ok", resp => {
+        const ids = resp.annotations.map(ann => ann.id)
+        if (ids.length > 0) {
+          lastSeenId = Math.max(...ids)
+        }
+        this.scheduleMessages(msgContainer, resp.annotations)
       })
       .receive("error", reason => console.log("join failed", reason))
 
-    const postButton = document.getElementById("msg-submit")
-    const msgInput = document.getElementById("msg-input")
     postButton.addEventListener("click", e => {
       const payload = {
         body: msgInput.value,
@@ -36,7 +58,6 @@ export default {
       msgInput.value = ""
     })
 
-    const msgContainer = document.getElementById("msg-container")
     msgContainer.addEventListener("click", e => {
       e.preventDefault()
       const seconds =
@@ -48,6 +69,7 @@ export default {
       Player.seekTo(seconds)
     })
     vidChannel.on("new_annotation", resp => {
+      lastSeenId = resp.id
       this.renderAnnotation(msgContainer, resp)
     })
   },
